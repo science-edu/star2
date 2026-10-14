@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>우주 테마: 별의 색과 표면 온도 짝맞추기 (16장)</title>
+    <!-- QR 생성을 위한 라이브러리 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background: linear-gradient(135deg, #090a16, #1b143f, #050511);
+            color: #ffffff;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        h1 { margin-bottom: 5px; font-size: 1.8rem; text-shadow: 0 0 15px rgba(129, 140, 248, 0.6); }
+        p { color: #cbd5e1; margin-bottom: 15px; font-size: 0.95rem; }
+        
+        .top-bar {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .share-btn {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);
+            transition: transform 0.2s;
+        }
+        .share-btn:hover { transform: scale(1.05); }
+
+        /* 게임 상태창 (시도 횟수, 시간) */
+        .score-board {
+            display: flex;
+            gap: 25px;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            background: rgba(30, 41, 59, 0.8);
+            padding: 10px 24px;
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .score-board span {
+            color: #38bdf8;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 130px);
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 25px;
+        }
+        .card {
+            width: 130px;
+            height: 140px;
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 2px solid #334155;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.3s, background 0.3s, border-color 0.3s;
+            padding: 10px;
+            box-sizing: border-box;
+            text-align: center;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+        .card:hover {
+            border-color: #38bdf8;
+            transform: translateY(-4px);
+        }
+        .card.flipped {
+            background: linear-gradient(145deg, #1d4ed8, #1e40af);
+            border-color: #93c5fd;
+            color: #ffffff;
+        }
+        .card.matched {
+            background: linear-gradient(145deg, #047857, #065f46);
+            border-color: #34d399;
+            cursor: default;
+            opacity: 0.85;
+        }
+        #restart {
+            padding: 10px 24px;
+            font-size: 16px;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
+            transition: transform 0.2s;
+        }
+        #restart:hover { transform: scale(1.05); }
+
+        /* QR 모달 창 스타일 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.75);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #1e293b;
+            padding: 25px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid #475569;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            max-width: 320px;
+            width: 100%;
+        }
+        #qrcode {
+            background: white;
+            padding: 15px;
+            display: inline-block;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        .close-btn {
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .close-btn:hover { background-color: #dc2626; }
+
+        /* 모바일 반응형 처리 */
+        @media (max-width: 600px) {
+            .game-board {
+                grid-template-columns: repeat(4, 75px);
+                gap: 8px;
+            }
+            .card {
+                width: 75px;
+                height: 90px;
+                font-size: 11px;
+                padding: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>✨ 우주 테마: 별의 색과 표면 온도 짝맞추기</h1>
+    <p>총 16장의 카드를 뒤집어 별의 색과 알맞은 온도를 짝지어 보세요!</p>
+    
+    <div class="top-bar">
+        <button class="share-btn" onclick="openQRModal()">📱 학생용 QR 공유하기</button>
+    </div>
+
+    <!-- 시도 횟수 및 타이머 표시 바 -->
+    <div class="score-board">
+        <div>시도 횟수: <span id="attempts">0</span>회</div>
+        <div>경과 시간: <span id="timer">0</span>초</div>
+    </div>
+
+    <div class="game-board" id="board"></div>
+    <button id="restart" onclick="startGame()">게임 다시 시작</button>
+
+    <!-- QR 모달 -->
+    <div id="qrModal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-top:0; color:#f8fafc;">학생 입장용 QR 코드</h3>
+            <p style="font-size: 0.85rem; color:#94a3b8; margin-bottom:10px;">이 화면을 띄워두고 학생들이 스캔하게 하세요.</p>
+            <div id="qrcode"></div>
+            <br>
+            <button class="close-btn" onclick="closeQRModal()">닫기</button>
+        </div>
+    </div>
+
+    <script>
+        // 4가지 그룹 (id 0~3) 각각 색상 카드 2장, 온도 카드 2장씩 총 16장 구성
+        const basePairs = [
+            { id: 0, color: "⭐ 청색", temp: "🌡️ 30,000K 이상" },
+            { id: 1, color: "⭐ 백색", temp: "🌡️ 7,500 ~ 10,000K" },
+            { id: 2, color: "⭐ 황색", temp: "🌡️ 5,000K" },
+            { id: 3, color: "⭐ 적색", temp: "🌡️ 3,500K 이하" }
+        ];
+
+        let cards = [];
+        let flippedCards = [];
+        let matchedCount = 0;
+        let isLock = false;
+
+        let attemptCount = 0;
+        let seconds = 0;
+        let timerInterval = null;
+        let isGameStarted = false;
+
+        function startGame() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            flippedCards = [];
+            matchedCount = 0;
+            isLock = false;
+            attemptCount = 0;
+            seconds = 0;
+            isGameStarted = false;
+
+            document.getElementById('attempts').innerText = attemptCount;
+            document.getElementById('timer').innerText = seconds;
+            clearInterval(timerInterval);
+
+            let rawCards = [];
+            // 각 그룹마다 색상 2장, 온도 2장 생성 (총 16장)
+            basePairs.forEach(pair => {
+                rawCards.push({ content: pair.color, id: pair.id });
+                rawCards.push({ content: pair.color, id: pair.id });
+                rawCards.push({ content: pair.temp, id: pair.id });
+                rawCards.push({ content: pair.temp, id: pair.id });
+            });
+
+            // 섞기
+            cards = rawCards.sort(() => Math.random() - 0.5);
+
+            cards.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.classList.add('card');
+                card.dataset.id = item.id;
+                card.dataset.index = index;
+                card.innerText = "🌌";
+                card.addEventListener('click', flipCard);
+                board.appendChild(card);
+            });
+        }
+
+        function startTimer() {
+            if (!isGameStarted) {
+                isGameStarted = true;
+                timerInterval = setInterval(() => {
+                    seconds++;
+                    document.getElementById('timer').innerText = seconds;
+                }, 1000);
+            }
+        }
+
+        function flipCard() {
+            if (isLock) return;
+            const clicked = this;
+            const index = clicked.dataset.index;
+
+            if (clicked.classList.contains('flipped') || clicked.classList.contains('matched')) return;
+
+            startTimer();
+
+            clicked.innerText = cards[index].content;
+            clicked.classList.add('flipped');
+            flippedCards.push({ element: clicked, id: clicked.dataset.id });
+
+            if (flippedCards.length === 2) {
+                attemptCount++;
+                document.getElementById('attempts').innerText = attemptCount;
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            const [card1, card2] = flippedCards;
+
+            // 같은 id(별 종류)이면서, 서로 다른 카드 타입(색상과 온도)이거나 같은 그룹일 때 매칭 허용
+            // 여기서는 동일한 id를 가진 카드 2장을 연속해서 맞추는 방식 (예: 청색 카드와 30000K 카드 조합)
+            if (card1.id === card2.id) {
+                card1.element.classList.add('matched');
+                card2.element.classList.add('matched');
+                flippedCards = [];
+                matchedCount += 2;
+
+                if (matchedCount === cards.length) {
+                    clearInterval(timerInterval);
+                    setTimeout(() => {
+                        alert(`🎉 축하합니다! 모든 16장의 카드를 맞췄습니다!\n⏱️ 소요 시간: ${seconds}초\n🔄 시도 횟수: ${attemptCount}회`);
+                    }, 300);
+                }
+            } else {
+                isLock = true;
+                setTimeout(() => {
+                    card1.element.innerText = "🌌";
+                    card2.element.innerText = "🌌";
+                    card1.element.classList.remove('flipped');
+                    card2.element.classList.remove('flipped');
+                    flippedCards = [];
+                    isLock = false;
+                }, 900);
+            }
+        }
+
+        // QR 생성 및 모달 제어
+        let qrInitialized = false;
+        function openQRModal() {
+            document.getElementById('qrModal').style.display = 'flex';
+            if (!qrInitialized) {
+                const currentUrl = window.location.href;
+                new QRCode(document.getElementById("qrcode"), {
+                    text: currentUrl,
+                    width: 160,
+                    height: 160
+                });
+                qrInitialized = true;
+            }
+        }
+
+        function closeQRModal() {
+            document.getElementById('qrModal').style.display = 'none';
+        }
+
+        startGame();
+    </script>
+</body>
+</html>
